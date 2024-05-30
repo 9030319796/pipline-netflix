@@ -99,9 +99,10 @@ pipeline{
         //     }
         // }
     }
+}
     post {
      sh '''
      Build is successful
      '''
     }
-}
+
