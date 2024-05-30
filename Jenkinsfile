@@ -1,8 +1,11 @@
 pipeline{
-    agent any
+    agent {
+        label 'linux_slave_0.181'
+    }
     tools{
-        jdk 'jdk'
-        nodejs 'nodejs'
+        jdk 'JAVA_HOME'
+        nodejs 'nodejs_home'
+        
     }
     environment {
         SCANNER_HOME=tool 'sonar-server'
@@ -15,7 +18,7 @@ pipeline{
         }
         stage('Checkout from Git'){
             steps{
-                git branch: 'master', url: 'https://github.com/AmanPathak-DevOps/Netflix-Clone-K8S-End-to-End-Project.git'
+                git branch: 'master', url: 'https://github.com/9030319796/pipline-netflix.git'
             }
         }
         stage("Sonarqube Analysis"){
@@ -53,53 +56,51 @@ pipeline{
         stage("Docker Image Build"){
             steps{
                 script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker system prune -f"
-                       sh "docker container prune -f"
-                       sh "docker build --build-arg TMDB_V3_API_KEY=8b174e589e2f03f9fd8123907bd7800c -t netflix ."
+                    
+                    sh "docker build --build-arg TMDB_V3_API_KEY=63cc6c7d94ca64ee08a360658a5dc5e4 -t 9030319796/netflix-app ."
                     }
                 }
             }
         }
-        stage("Docker Image Pushing"){
-            steps{
+        stage('Containerize And Test') {
+            steps {
                 script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker tag netflix avian19/netflix:latest "
-                       sh "docker push avian19/netflix:latest "
-                    }
+                    sh 'docker run -d --name netflix 9030319796/netflix-app && sleep 10 && docker stop netflix'
                 }
             }
         }
+        stage('Push Image To Dockerhub') {
+            steps {
+                script{
+                    withCredentials([string(credentialsId: 'DockerHubPass', variable: 'DockerHubpass')]) {
+                    sh 'docker login -u 9030319796 --password ${DockerHubpass}' }
+                    sh 'docker push 9030319796/netflix-app:latest'
+                }
+            }
+        }   
         stage("TRIVY Image Scan"){
             steps{
-                sh "trivy image avian19/netflix:latest > trivyimage.txt" 
+                sh "trivy image 9030319796/netflix-app:latest > trivyimage.txt" 
             }
         }
-        stage('Deploy to Kubernetes'){
-            steps{
-                script{
-                    dir('Kubernetes') {
-                        withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
-                                sh 'kubectl apply -f deployment.yml'
-                                sh 'kubectl apply -f service.yml'
-                                sh 'kubectl get svc'
-                                sh 'kubectl get all'
-                        }   
-                    }
-                }
-            }
-        }
+        // stage('Deploy to Kubernetes'){
+        //     steps{
+        //         script{
+        //             dir('Kubernetes') {
+        //                 withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
+        //                         sh 'kubectl apply -f deployment.yml'
+        //                         sh 'kubectl apply -f service.yml'
+        //                         sh 'kubectl get svc'
+        //                         sh 'kubectl get all'
+        //                 }   
+        //             }
+        //         }
+        //     }
+        // }
     }
     post {
-     always {
-        emailext attachLog: true,
-            subject: "'${currentBuild.result}'",
-            body: "Project: ${env.JOB_NAME}<br/>" +
-                "Build Number: ${env.BUILD_NUMBER}<br/>" +
-                "URL: ${env.BUILD_URL}<br/>",
-            to: 'aman07pathak@gmail.com',
-            attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
-        }
+     sh '''
+     Build is successful
+     '''
     }
 }
