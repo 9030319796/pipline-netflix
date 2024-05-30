@@ -61,7 +61,7 @@ pipeline{
                     }
                 }
             }
-        }
+        
         stage('Containerize And Test') {
             steps {
                 script{
@@ -83,6 +83,7 @@ pipeline{
                 sh "trivy image 9030319796/netflix-app:latest > trivyimage.txt" 
             }
         }
+    
         // stage('Deploy to Kubernetes'){
         //     steps{
         //         script{
